@@ -1,0 +1,19 @@
+/*
+.v File
+
+File Content Description: This file defined the inputs as a and b and the outputs as sum and co. It also created the Entity definitions for co and sum. 
+*/
+
+`timescale 1ns / 1ps
+module HA
+(
+    input a,
+    input b,
+    output sum,
+    output co
+ );
+    
+    assign sum = (a & ~b) | (~a & b);
+    assign co = a & b;
+endmodule
+
