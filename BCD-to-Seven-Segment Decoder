@@ -1,0 +1,50 @@
+/*
+.v File
+
+File Content Description: This file consists of a decoder module which includes the outputs, inputs, and case statements assigning different segments of the display to each number. A continuous assignment statement for the switches is also present. 
+*/
+
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company:Q&A Co.
+// Engineer: Amani, Alaina, Qiying
+//
+// Create Date: 10/05/2018 11:59:57 AM
+// Design Name: Display Generator 
+// Module Name: Lab 4
+// Project Name: BCD-to-Seven-Segment Decoder
+// Target Devices:
+// Tool Versions:
+// Description: 
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////
+
+
+module decoder(binaryNumber,digitalNumber,switches,anodes);
+    input [3:0] binaryNumber,switches;
+    output reg [7:0] digitalNumber;
+    output [3:0] anodes;
+    always @ (binaryNumber)
+    begin
+        case(binaryNumber)
+            0:digitalNumber = 8'b00000011;
+            1:digitalNumber = 8'b10011111;
+            2:digitalNumber = 8'b00100101;
+            3:digitalNumber = 8'b00001101;
+            4:digitalNumber = 8'b10011001;
+            5:digitalNumber = 8'b01001001;
+            6:digitalNumber = 8'b01000001;
+            7:digitalNumber = 8'b00011111;
+            8:digitalNumber = 8'b00000001;
+            9:digitalNumber = 8'b00001001;
+            default: digitalNumber = 8'b00000000;
+        endcase
+    end
+    assign anodes = ~switches;
+endmodule
