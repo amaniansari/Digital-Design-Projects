@@ -1,0 +1,142 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Q&A Co. 
+// Engineer: Amani, Alaina, Qiying 
+// 
+// Create Date: 10/17/2018 12:00:00 PM
+// Design Name: Five-Bit Magnitude Comparator 
+// Module Name: comp_5b
+// Project Name: Lab 6
+// Target Devices: 
+// Tool Versions: 
+// Description: This is the main file used in this lab. It includes instantiations for the 5 bit comparator and 7 segment display as  
+// well as the HDL form of the muxes implemented in our design. 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//////////////////////////////////////////////////////////////////////////////////
+
+//Main File
+// all encompassing module
+module comp_5b(A, B, clk, ssegs, disp_en);
+    input [4:0] A, B;
+    input clk; 
+    output [7:0] ssegs; 
+    output [3:0] disp_en;
+    reg [4:0] A_Mag, B_Mag;
+    wire sign;
+    wire eq;
+    
+    assign sign = (A[4] & B[4]);
+    
+    
+//instantiate for 5 bit comparator
+   comp_nb #(.n(5))fivebitComp
+            (
+             .A (A_Mag),
+             .B (B_Mag),
+             .EQ(eq),
+             //purposefully didn't include them
+             .GT(),
+             .LT()
+             );
+
+    //instantiate stuff for the seven segment display 
+    univ_sseg 
+    (
+    .cnt1 ({9'b000000000,A_Mag}),
+    .cnt2 (0),
+    .valid (eq),
+    .dp_en (0),
+    .dp_sel (0),
+    .mod_sel (2'b00),
+    .clk (clk),
+    .sign (sign),
+    .ssegs (ssegs),
+    .disp_en (disp_en)
+    );   
+
+    //MUX for A
+    always @ (A)
+        begin
+            if (A[4] == 1)
+            begin
+            
+           //do 2's complement of A[4:0] and assign that as a[4:0]
+           A_Mag = ~A + 1;
+            end
+            
+            else
+            begin
+            // assign A[4:0] to a[4:0]
+             A_Mag = A;
+            end
+        
+        end    
+    //MUX for B
+       always @ (B)
+           begin
+               if (B[4] == 1)
+               begin
+               
+              //do 2's complement of A[4:0] and assign that as a[4:0]
+              B_Mag = ~B + 1;
+               end
+               
+               else
+               begin
+               // assign A[4:0] to a[4:0]
+               B_Mag = B;
+               end
+               
+           
+           end
+
+//Comparator Module File:
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Q&A Co. 
+// Engineer: Amani, Alaina, Qiying 
+// 
+// Create Date: 10/17/2018 12:00:00 PM
+// Design Name: Five-Bit Magnitude Comparator 
+// Module Name: comp_nb
+// Project Name: Lab 6
+// Target Devices: 
+// Tool Versions: 
+// Description: This file re-uses code from a previous lab and simply consists of the HDL equivalent of a comparator where two inputs are compared and EQ,GT, and LT are determined. 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////
+module comp_nb(A, B, EQ, LT, GT);
+ input [n-1:0] A,B;
+ output reg EQ, LT, GT;
+parameter n = 8;
+     always @ (A,B)
+     begin
+         if (A == B)
+         begin
+            EQ = 1; LT = 0; GT = 0;
+         end
+         else if (A > B)
+         begin
+             EQ = 0; LT = 0; GT = 1;
+         end
+         else if (A < B)
+         begin
+            EQ = 0; LT = 1; GT = 0;
+         end
+
+         else
+         begin
+            EQ = 0; LT = 0; GT = 0;
+         end
+     end
+ endmodule
