@@ -1,0 +1,404 @@
+// Main File:
+
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Q&A Co.
+// Engineer: Amani, Alaina, Qiying
+//
+// Create Date: 11/2/2018 12:45:31 PM
+// Design Name: 4-Bit Up/Down Counter with Multiplexed 7-Segment // Display
+// Module Name: main
+// Project Name: Lab 9  
+// Target Devices:
+// Tool Versions:
+// Description: The main file that instantiates all the other 
+// files.
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////////////////
+
+module main(UPDN,clk,seg,disp_en,SUO);
+    input UPDN,clk;
+    output [7:0]seg;
+    output [3:0]disp_en;
+    output [14:0] SUO;
+
+    //Wires 
+    wire [3:0] ps,ns;
+    wire slw_clock;
+    wire [3:0] DCNT;
+    wire [14:0] SBCNT;
+    
+    
+    //NS Decoder
+    State_Decoder NS (
+    .up (UPDN),
+    .ps (ps),
+    .ns (ns)
+    );
+    
+    //Clock Divider
+    clk_divder_nbit # (.n(25)) CLK_Divider(
+    .clockin(clk),
+    .clockout(slw_clock)
+    );      
+    
+    //State Register
+    reg_nb # (.n(4)) SR (
+    .data_in(ns),
+    .clk(slw_clock),
+    .clr(0),
+    .ld(1),
+    .data_out(ps)
+    );
+    
+    //Final Decoder
+    Output_Decoder OD (
+    .st(ps),
+    .sbcnt(SBCNT),
+    .dcnt(DCNT)
+    );
+    
+    //Instantiate MUX
+   mux_2t1_nb # (.n(15)) MUX(
+       .SEL(UPDN),
+       .D0(~SBCNT),
+       .D1(SBCNT),
+       .D_OUT(SUO)
+       );
+    
+    //SSEG
+    sseg_Created ssegs
+    (
+    .BCNT(DCNT),
+    .clk(clk),
+    .ssegs(seg),
+    .anodes(disp_en)
+    );
+    
+endmodule
+
+
+// NS Decoder:
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Q&A Co.
+// Engineer: Amani, Alaina, Qiying
+//
+// Create Date: 11/2/2018 12:45:31 PM
+// Design Name: 4-Bit Up/Down Counter with Multiplexed 7-Segment // Display
+// Module Name: State_Decoder
+// Project Name: Lab 9  
+// Target Devices:
+// Tool Versions:
+// Description: The HDL for the NS Decoder takes in the present // state and outputs the next state.
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////////////////
+
+module State_Decoder(
+    input up,
+    input [3:0] ps,
+    output reg [3:0] ns
+    );
+        always @(ns,ps,up)
+            begin
+                if (up == 0)
+                begin
+                
+                case(ps)
+                4'b0000:ns = 4'b1111;
+                4'b0001:ns = 4'b0000;
+                4'b0010:ns = 4'b0001;
+                4'b0011:ns = 4'b0010;
+                4'b0100:ns = 4'b0011;
+                4'b0101:ns = 4'b0100;
+                4'b0110:ns = 4'b0101;
+                4'b0111:ns = 4'b0110;
+                4'b1000:ns = 4'b0111;
+                4'b1001:ns = 4'b1000;
+                4'b1010:ns = 4'b1001;
+                4'b1011:ns = 4'b1010;
+                4'b1100:ns = 4'b1011;
+                4'b1101:ns = 4'b1100;
+                4'b1110:ns = 4'b1101;
+                4'b1111:ns = 4'b1110;
+                default ns = 4'b0000;
+                endcase
+                
+                end
+                
+                
+                else 
+                begin
+                
+                case(ps)
+                4'b0000:ns = 4'b0001;
+                4'b0001:ns = 4'b0010;
+                4'b0010:ns = 4'b0011;
+                4'b0011:ns = 4'b0100;
+                4'b0100:ns = 4'b0101;
+                4'b0101:ns = 4'b0110;
+                4'b0110:ns = 4'b0111;
+                4'b0111:ns = 4'b1000;
+                4'b1000:ns = 4'b1001;
+                4'b1001:ns = 4'b1010;
+                4'b1010:ns = 4'b1011;
+                4'b1011:ns = 4'b1100;
+                4'b1100:ns = 4'b1101;
+                4'b1101:ns = 4'b1110;
+                4'b1110:ns = 4'b1111;
+                4'b1111:ns = 4'b0000; 
+                default ns = 4'b0000;
+                endcase
+                
+                end
+        end
+endmodule
+
+// Output Decoder: 
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Q&A Co.
+// Engineer: Amani, Alaina, Qiying
+//
+// Create Date: 11/2/2018 12:45:31 PM
+// Design Name: 4-Bit Up/Down Counter with Multiplexed 7-Segment // Display
+// Module Name: Output_Decoder
+// Project Name: Lab 9  
+// Target Devices:
+// Tool Versions:
+// Description: The output decoder has a present state input and // a 15-bit stoneage binary count output and 4-bit count output.
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////////////////
+
+module Output_Decoder(
+    input [3:0] st,
+    output reg [14:0] sbcnt,
+    output [3:0] dcnt
+    );
+    
+    
+    always @ (st)
+        begin
+        case(st)
+        4'b0000:sbcnt = 15'b000_0000_0000_0000;
+        4'b0001:sbcnt = 15'b000_0000_0000_0001;
+        4'b0010:sbcnt = 15'b000_0000_0000_0011;
+        4'b0011:sbcnt = 15'b000_0000_0000_0111;
+        4'b0100:sbcnt = 15'b000_0000_0000_1111;
+        4'b0101:sbcnt = 15'b000_0000_0001_1111;
+        4'b0110:sbcnt = 15'b000_0000_0011_1111;
+        4'b0111:sbcnt = 15'b000_0000_0111_1111;
+        4'b1000:sbcnt = 15'b000_0000_1111_1111;
+        4'b1001:sbcnt = 15'b000_0001_1111_1111;
+        4'b1010:sbcnt = 15'b000_0011_1111_1111;
+        4'b1011:sbcnt = 15'b000_0111_1111_1111;
+        4'b1100:sbcnt = 15'b000_1111_1111_1111;
+        4'b1101:sbcnt = 15'b001_1111_1111_1111;
+        4'b1110:sbcnt = 15'b011_1111_1111_1111;
+        4'b1111:sbcnt = 15'b111_1111_1111_1111;
+        default sbcnt = 15'b000_0000_0000_0000; // catch all
+        endcase   
+        end
+         
+   assign dcnt = st;   
+ 
+endmodule    
+
+// SSEG Created:
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Q&A Co.
+// Engineer: Amani, Alaina, Qiying
+//
+// Create Date: 11/2/2018 12:45:31 PM
+// Design Name: 4-Bit Up/Down Counter with Multiplexed 7-Segment // Display
+// Module Name: sseg_Created
+// Project Name: Lab 9  
+// Target Devices:
+// Tool Versions:
+// Description: Module for the created seven segment display 
+// which contains numerous instantiations.  
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////////////////
+
+module sseg_Created(
+input [3:0] BCNT,
+input clk,
+output [7:0] ssegs,
+output [3:0] anodes
+);   
+
+//wires
+wire [7:0]BCD;
+wire clkOut;
+wire [3:0] digit;
+
+
+//Instantiate Binary to BCD
+BinaryToBCD Converter(
+.Binary(BCNT),
+.BCD(BCD)
+);    
+
+//Instantiate Clock (1 KHz)
+clk_divder_nbit # (.n(19)) FastClk(
+.clockin(clk),
+.clockout(clkOut)
+);
+
+
+//Instantiate MUX
+mux_2t1_nb # (.n(4)) MUX(
+.SEL(clkOut),
+.D0(BCD [7:4]),
+.D1(BCD [3:0]),
+.D_OUT(digit)
+);
+
+//Instantiate BCD to SSEGS
+BCDToSSEGS Conversion(
+.BCD(digit),
+.clk(clkOut),
+.digitalNumber(ssegs),
+.anodes(anodes)
+);
+    
+endmodule
+
+//Binary to BCD:
+
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Q&A Co.
+// Engineer: Amani, Alaina, Qiying
+//
+// Create Date: 11/2/2018 12:45:31 PM
+// Design Name: 4-Bit Up/Down Counter with Multiplexed 7-Segment // Display
+// Module Name: BinaryToBCD
+// Project Name: Lab 9  
+// Target Devices:
+// Tool Versions:
+// Description: Converts a 4 bit binary number to it’s 8 bit BCD // equivalent
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////////////////
+
+//Binary to BCD
+module BinaryToBCD(
+input [3:0] Binary,
+output reg [7:0]BCD
+);
+        always @(Binary,BCD)
+            begin
+                
+                case(Binary)
+                4'b0000:BCD = 8'b0000_0000;
+                4'b0001:BCD = 8'b0000_0001;
+                4'b0010:BCD = 8'b0000_0010;
+                4'b0011:BCD = 8'b0000_0011;
+                4'b0100:BCD = 8'b0000_0100;
+                4'b0101:BCD = 8'b0000_0101;
+                4'b0110:BCD = 8'b0000_0110;
+                4'b0111:BCD = 8'b0000_0111;
+                4'b1000:BCD = 8'b0000_1000;
+                4'b1001:BCD = 8'b0000_1001;
+                4'b1010:BCD = 8'b0001_0000;
+                4'b1011:BCD = 8'b0001_0001;
+                4'b1100:BCD = 8'b0001_0010;
+                4'b1101:BCD = 8'b0001_0011;
+                4'b1110:BCD = 8'b0001_0100;
+                4'b1111:BCD = 8'b0001_0101;
+                default BCD = 8'b0000_0000;
+                endcase          
+        end
+endmodule
+
+
+// BCD to SSEGS:
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Q&A Co.
+// Engineer: Amani, Alaina, Qiying
+//
+// Create Date: 11/2/2018 12:45:31 PM
+// Design Name: 4-Bit Up/Down Counter with Multiplexed 7-Segment Display
+// Module Name: BCDToSSEGS
+// Project Name: Lab 9  
+// Target Devices:
+// Tool Versions:
+// Description: Translates the BCD to its seven segment display // equivalent. Also uses assignment statements so only the first // two anodes are turned on. 
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////////////////
+
+//BCD to SSEGS
+module BCDToSSEGS(BCD,anodes,clk,digitalNumber); 
+//digital Number are the sseg
+    input [3:0] BCD;
+    input clk;
+    output reg [7:0] digitalNumber;
+    output reg [3:0] anodes;
+    always @ (BCD)
+    begin
+        case(BCD)
+            4'b0000:digitalNumber = 8'b0000_0011;
+            4'b0001:digitalNumber = 8'b1001_1111;
+            4'b0010:digitalNumber = 8'b0010_0101;
+            4'b0011:digitalNumber = 8'b0000_1101;
+            4'b0100:digitalNumber = 8'b1001_1001;
+            4'b0101:digitalNumber = 8'b0100_1001;
+            4'b0110:digitalNumber = 8'b0100_0001;
+            4'b0111:digitalNumber = 8'b0001_1111;
+            4'b1000:digitalNumber = 8'b0000_0001;
+            4'b1001:digitalNumber = 8'b0000_1001;
+            default: digitalNumber = 8'b0000_0000;
+        endcase
+        end
+    always @ (clk)
+    begin
+        case(clk)
+        1:anodes = 4'b1101;
+        0:anodes = 4'b1110;
+        default:anodes =4'b0000;
+        endcase    
+    end
+endmodule
+
+
+
+
+
