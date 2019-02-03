@@ -1,0 +1,42 @@
+/*
+.v File
+
+File Content Description: This file defined the 3 inputs and the 4 outputs. The 4 outputs were defined as Sum in SOP and POS and Co in SOP and POS. 
+*/
+
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company:Q&A Co.
+// Engineer:Amani, Alaina, Qiying
+//
+// Create Date: 10/01/2018 11:59:57 AM
+// Design Name: Full Adder 
+// Module Name: Lab 2
+// Project Name: Half Adder (HA) & Full Adder (FA): Standard POS Form 
+// Target Devices:
+// Tool Versions:
+// Description: Designed a circuit using a full adder and used equations in the SOP and POS forms. 
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////////////////
+
+module FullAdder(
+    input A,
+    input B,
+    input Cin,
+    output Sum_SOP,
+    output Sum_POS,
+    output Co_SOP,
+    output Co_POS
+    );
+    assign Sum_SOP = (~A & ~B & Cin)|(~A & B & ~Cin)|(A & ~B & ~Cin)|(A & B & Cin);
+    assign Sum_POS = (A|B|Cin) & (A|~B|~Cin) & (~A|B|~Cin) & (~A|~B|Cin);
+    assign Co_SOP = (~A & B & Cin)|(A & ~B & Cin)|(A & B & ~Cin)|(A & B & Cin);
+    assign Co_POS = (A|B|Cin) & (A|B|~Cin) & (A|~B|Cin) & (~A|B|Cin);
+endmodule
+
