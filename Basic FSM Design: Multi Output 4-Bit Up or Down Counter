@@ -1,0 +1,216 @@
+//Main File
+
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Q&A Co.
+// Engineer: Amani, Alaina, Qiying
+//
+// Create Date: 10/29/2018 12:48:41 PM
+// Design Name: Multi Output 4-Bit Up/Down Counter 
+// Module Name: main
+// Project Name: Lab 8  
+// Target Devices:
+// Tool Versions:
+// Description: The main file that instantiates all the other components of lab 8.
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////////////////
+
+module main(UPDN,clk,seg,disp_en,SBCNT);
+    input UPDN,clk;
+    output [7:0]seg;
+    output [3:0]disp_en;
+    output [14:0] SBCNT;
+    //Wires
+    wire [3:0] ps,ns;
+    wire slw_clock;
+    wire [3:0] DCNT;
+    
+    //NS Decoder
+    State_Decoder NS (
+    .up (UPDN),
+    .ps (ps),
+    .ns (ns)
+    );
+    
+    //Clock Divider
+    clk_divder_nbit # (.n(25)) CLK_Divider(
+    .clockin(clk),
+    .clockout(slw_clock)
+    );      
+    
+    //State Register
+    reg_nb # (.n(4)) SR (
+    .data_in(ns),
+    .clk(slw_clock),
+    .clr(0),
+    .ld(1),
+    .data_out(ps)
+    );
+    //Final Decoder
+    Output_Decoder OD (
+    .st(ps),
+    .sbcnt(SBCNT),
+    .dcnt(DCNT)
+    );
+    
+    //SSEG
+    univ_sseg SSEG
+    (
+    .cnt1 ({10'b0000000000,DCNT}),
+    .cnt2 (0),
+    .valid (1),
+    .dp_en (0),
+    .dp_sel (0),
+    .mod_sel (2'b00),
+    .clk (clk),
+    .sign (0),
+    .ssegs (seg),
+    .disp_en (disp_en)
+    );
+    
+endmodule
+
+// NS Decoder:
+
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Q&A Co.
+// Engineer: Amani, Alaina, Qiying
+//
+// Create Date: 10/29/2018 12:48:41 PM
+// Design Name: Multi Output 4-Bit Up/Down Counter 
+// Module Name: State_Decoder
+// Project Name: Lab 8  
+// Target Devices:
+// Tool Versions:
+// Description: The HDL for the NS Decoder takes in the present state and outputs the next state.
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////////////////
+
+module State_Decoder(
+    input up,
+    input [3:0] ps,
+    output reg [3:0] ns
+    );
+        always @(ns,ps,up)
+            begin
+                if (up == 0)
+                begin
+                
+                case(ps)
+                4'b0000:ns = 4'b1111;
+                4'b0001:ns = 4'b0000;
+                4'b0010:ns = 4'b0001;
+                4'b0011:ns = 4'b0010;
+                4'b0100:ns = 4'b0011;
+                4'b0101:ns = 4'b0100;
+                4'b0110:ns = 4'b0101;
+                4'b0111:ns = 4'b0110;
+                4'b1000:ns = 4'b0111;
+                4'b1001:ns = 4'b1000;
+                4'b1010:ns = 4'b1001;
+                4'b1011:ns = 4'b1010;
+                4'b1100:ns = 4'b1011;
+                4'b1101:ns = 4'b1100;
+                4'b1111:ns = 4'b1101;
+                default ns = 4'b0000;
+                endcase
+                
+                end
+                
+                
+                else
+                begin
+                
+                case(ps)
+                4'b0000:ns = 4'b0001;
+                4'b0001:ns = 4'b0010;
+                4'b0010:ns = 4'b0011;
+                4'b0011:ns = 4'b0100;
+                4'b0100:ns = 4'b0101;
+                4'b0101:ns = 4'b0110;
+                4'b0110:ns = 4'b0111;
+                4'b0111:ns = 4'b1000;
+                4'b1000:ns = 4'b1001;
+                4'b1001:ns = 4'b1010;
+                4'b1010:ns = 4'b1011;
+                4'b1011:ns = 4'b1100;
+                4'b1100:ns = 4'b1101;
+                4'b1101:ns = 4'b1110;
+                4'b1110:ns = 4'b1111;
+                4'b1111:ns = 4'b0000;
+                default ns = 4'b0000;
+                endcase
+                
+                end
+        end
+endmodule
+
+//Output Decoder:
+
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Q&A Co.
+// Engineer: Amani, Alaina, Qiying
+//
+// Create Date: 10/29/2018 12:48:41 PM
+// Design Name: Multi Output 4-Bit Up/Down Counter  
+// Module Name: Output_Decoder
+// Project Name: Lab 8  
+// Target Devices:
+// Tool Versions:
+// Description: The output decoder has a present state input and a 15-bit stoneage binary count output and 4-bit count output.
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////////////////
+
+module Output_Decoder(
+    input [3:0] st,
+    output reg [14:0] sbcnt,
+    output [3:0] dcnt
+    );
+    
+    
+    always @ (st)
+        begin
+        case(st)
+        4'b0000:sbcnt = 15'b000_0000_0000_0000;
+        4'b0001:sbcnt = 15'b000_0000_0000_0001;
+        4'b0010:sbcnt = 15'b000_0000_0000_0011;
+        4'b0011:sbcnt = 15'b000_0000_0000_0111;
+        4'b0100:sbcnt = 15'b000_0000_0000_1111;
+        4'b0101:sbcnt = 15'b000_0000_0001_1111;
+        4'b0110:sbcnt = 15'b000_0000_0011_1111;
+        4'b0111:sbcnt = 15'b000_0000_0111_1111;
+        4'b1000:sbcnt = 15'b000_0000_1111_1111;
+        4'b1001:sbcnt = 15'b000_0001_1111_1111;
+        4'b1010:sbcnt = 15'b000_0011_1111_1111;
+        4'b1011:sbcnt = 15'b000_0111_1111_1111;
+        4'b1100:sbcnt = 15'b000_1111_1111_1111;
+        4'b1101:sbcnt = 15'b001_1111_1111_1111;
+        4'b1110:sbcnt = 15'b011_1111_1111_1111;
+        4'b1111:sbcnt = 15'b111_1111_1111_1111;
+        default sbcnt = 15'b000_0000_0000_0000; // catch all
+        endcase  
+        end
+         
+   assign dcnt = st;  
+ 
+endmodule    
