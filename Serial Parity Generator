@@ -1,0 +1,346 @@
+// Main File:
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company:Q&A
+// Engineer:Amani, Alaina,Qiying
+//
+// Create Date: 12/07/2018 03:21:16 PM
+// Design Name: Serial Parity Generator
+// Module Name: Main
+// Project Name: Lab 13
+// Target Devices:
+// Tool Versions:
+// Description: Instantiates critical modules like the FSM, Shift // Register, Clk Dividers, Counters, Binary to SEG decoder, and 
+// MUXs 
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////////////////
+
+module Main(
+input [15:0] switches,
+input BTN,clk,
+output [3:0] an,
+output [7:0] seg
+);
+    
+//wires + regs
+reg RCO;
+wire slwclk,clkSSEG;
+reg [7:0] parity_letter;
+wire [1:0]sel;
+wire [1:0] countFinal;
+wire [4:0] parityCNTR;
+wire clr;
+wire [15:0] shiftOut;
+wire [7:0] tens,ones;
+//FSM
+fsm FSM (
+    .rco (RCO),
+    .btn (BTN),
+    .clk (slwclk),
+    .clr (clr),
+    .sel (sel)
+);
+//Shift register
+usr_nb #(.n(16)) MY_USR (
+    .data_in (switches),
+    .dbit (0),
+    .sel (sel),
+    .clk (slwclk),
+    .clr (0),
+    .data_out (shiftOut)
+); 
+//get RCO
+always @ (shiftOut)
+begin
+if (shiftOut == 16'b0000_0000_0000_0000)
+    RCO = 1;
+else
+    RCO = 0;
+end
+//CLK Divider
+clk_divder_nbit #(.n(25)) MY_DIV (
+    .clockin (clk),
+    .clockout (slwclk)
+); 
+//CLK Divider for display multiplexor counter
+clk_divder_nbit #(.n(13)) MY_DIV2 (
+    .clockin (clk),
+    .clockout (clkSSEG)
+); 
+
+//Instantiate Parity Counter
+cntr_up_clr_nb #(.n(16)) MY_CNTR (
+    .clk   (slwclk),
+    .clr   (clr),
+    .up    (shiftOut[0]),
+    .ld    (0),
+    .D     (0),
+    .count (parityCNTR)
+  );
+//Binary to SEG
+BinarytoSegment SEG(
+    .Binary(parityCNTR),
+    .ones (ones),
+    .tens (tens)
+);
+//Instantiate counter for sseg
+cntr_up_clr_nb #(.n(2)) SSEG (
+    .clk   (clkSSEG),
+    .clr   (0),
+    .up    (1),
+    .ld    (0),
+    .D     (0),
+    .count (countFinal)
+  );
+//MUX for anode
+ always @ (parityCNTR[0])
+          begin
+             case (parityCNTR[0])
+                0: parity_letter = 8'b0110_0001; 
+                1: parity_letter = 8'b1100_0101;
+                default parity_letter = 8'b0000_0000;
+             endcase
+          end
+//MUX for SSEG
+mux_4t1_nb  #(.n(8)) my_4t1_mux  (
+    .SEL   (countFinal),
+    .D0    (ones),
+    .D1    (tens),
+    .D2    (parity_letter),
+    .D3    (parity_letter),
+    .D_OUT (seg) ); 
+//Anode Decoder
+stand_dcdr_2t4_1cold  my_stand_dcdr  (
+    .SEL    (countFinal),
+    .D_OUT  (an)  );
+endmodule
+
+
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Q&A
+// Engineer: Amani, Alaina, Qiying
+//
+// Create Date: 07/07/2018 08:05:03 AM
+// Design Name: Serial Parity Generator
+// Module Name: fsm
+// Project Name: Lab 13
+// Target Devices:
+// Tool Versions:
+// Description: An FSM with two states, the inputs were RCO, BTN, // and clk. The outputs were CLR and SEL.
+//    Note: data widths of state variables are not specified
+//
+// Dependencies:
+//
+// Revision:
+// Revision 1.00 - File Created (07-07-2018)
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////////////////
+module fsm(clr,rco,btn,clk,sel);
+    input  rco,btn,clk;
+    output reg clr;
+    output reg [1:0] sel;
+     
+    //- next state & present state variables
+    reg  NS, PS;
+    //- bit-level state representations
+    parameter st_A=0, st_B=1;
+    
+    //- model the state registers
+    always @ (posedge clk)
+          PS <= NS;
+    
+    
+    //- model the next-state and output decoders
+    always @ (rco,btn)
+    begin
+       sel = 2'b00; // assign all outputs
+       case(PS)
+          st_A:
+          begin
+             sel = 2'b00;       
+             if (btn == 0)
+             begin
+                clr = 0;
+                NS = st_A;
+             end 
+             else
+             begin
+                clr = 1;
+                sel=2'b01;
+                NS = st_B;
+             end 
+          end
+          
+          st_B:
+             begin
+                sel = 2'b11;
+                clr = 0;
+             
+             if (rco == 0)
+                  begin
+                     NS = st_B;
+                  end 
+                  else
+                  begin
+                     NS = st_A;
+                  end 
+               end  
+             
+          endcase
+      end              
+endmodule
+
+
+
+
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Q&A
+// Engineer:Amani, Alaina, Qiying
+//
+// Create Date: 12/07/2018 04:11:55 PM
+// Design Name:Serial Parity Generator
+// Module Name: Binary to Segment
+// Project Name:Lab 13
+// Target Devices:
+// Tool Versions:
+// Description: A decoder that converts the 5-bit count of the 
+// parity counter to it’s Segment equivalent. The ones and tens // of the decimal number are assigned separately. 
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////////////////
+
+module BinarytoSegment(
+input [4:0] Binary,
+output reg [7:0] ones, tens
+);
+//wires
+        always @(Binary)
+            begin
+                
+                case(Binary)
+                5'b00000:
+                begin
+                ones = 8'b0000_0011;
+                tens = 8'b1111_1111;
+                end
+                
+                5'b00001: 
+                begin
+                ones = 8'b1001_1111;
+                tens = 8'b1111_1111;
+                end
+                                
+                5'b00010:
+                begin
+                ones = 8'b0010_0101;
+                tens = 8'b1111_1111;
+                end
+                                 
+                5'b00011:
+                begin
+                ones = 8'b0000_1101;
+                tens = 8'b1111_1111;
+                end
+                
+                5'b00100:
+                begin
+                ones = 8'b1001_1001;
+                tens = 8'b1111_1111;
+                end
+                
+                5'b00101:
+                begin
+                ones = 8'b0100_1001;
+                tens = 8'b1111_1111;
+                end
+                
+                5'b00110:
+                begin
+                ones = 8'b0100_0001;
+                tens = 8'b1111_1111;
+                end
+                
+                5'b00111:
+                begin
+                ones = 8'b0001_1111;
+                tens = 8'b1111_1111;
+                end
+                
+                5'b01000:
+                begin
+                ones = 8'b0000_0001;
+                tens = 8'b1111_1111;
+                end
+                
+                5'b01001:
+                begin
+                ones = 8'b0000_1001;
+                tens = 8'b1111_1111;
+                end
+                
+                5'b01010:
+                begin
+                ones = 8'b0000_0011;
+                tens = 8'b1001_1111;
+                end
+                
+                5'b01011:
+                begin
+                ones = 8'b1001_1111;
+                tens = 8'b1001_1111;
+                end
+                
+                5'b01100:
+                begin
+                ones = 8'b0010_0101;
+                tens = 8'b1001_1111;
+                end
+                
+                5'b01101:
+                begin
+                ones = 8'b0000_1101;
+                tens = 8'b1001_1111;
+                end
+                
+                5'b01110:
+                begin
+                ones = 8'b1001_1001;
+                tens = 8'b1001_1111;
+                end
+                
+                5'b01111:
+                begin
+                ones = 8'b0100_1001;
+                tens = 8'b1001_1111;
+                end
+                
+                5'b10000:
+                begin
+                ones = 8'b0100_0001;
+                tens = 8'b1001_1111;
+                end
+                
+                default
+                begin
+                ones = 8'b1111_1111;
+                tens = 8'b1111_1111;
+                end
+                
+                endcase          
+        end
+
+endmodule
