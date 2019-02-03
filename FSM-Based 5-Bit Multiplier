@@ -1,0 +1,220 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company:Q&A 
+// Engineer: Qiying Huang, Amani Ansari, Alaina Fua
+// 
+// Create Date: 12/06/2018 01:15:40 PM
+// Design Name: 5-Bit Multiplier 
+// Module Name: Main
+// Project Name: Lab 14
+// Target Devices: 
+// Tool Versions: 
+// Description: This module contains all the instantiations and     // internal connections of other modules.
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+
+module Main(a,b,btn,clk,led1,led2,seg,an);
+    input [4:0] a,b;
+    input clk,btn;
+    output [7:0] seg;
+    output [3:0] an;
+    output led1,led2;
+    wire clr,slo_clk,ld;
+    wire [9:0] shift,RCA_input,RCA_sum,reg_out;
+    wire [4:0] Q;
+    reg RCO;
+    wire [1:0] sel1, sel2;
+
+    
+  
+  usr_nb #(.n(10))left_shift_register(
+        .data_in({5'b00000,a}),
+        .dbit(0),
+        .sel(sel1),
+        .clk(slo_clk), 
+        .clr(clr),
+        .data_out(shift)
+    );
+
+    usr_nb #(.n(5))right_shift_register(
+        .data_in(b),
+        .dbit(0),
+        .sel(sel2),
+        .clk(slo_clk), 
+        .clr(clr),
+        .data_out(Q)
+        );
+        
+    always @ (Q)
+    begin
+        if (Q == 5'b0_0000)
+            RCO = 1;
+        else
+            RCO = 0;
+    end
+
+
+   mux_2t1_nb #(.n(10))MUX(
+       .SEL(Q[0]),
+       .D0(10'b00_0000_0000),
+       .D1(shift),
+       .D_OUT(RCA_input)
+   );
+   
+   rca_nb #(.n(10)) RCA(
+    .a(reg_out),
+    .b(RCA_input),
+    .cin(0),
+    .sum(RCA_sum)
+   );
+      reg_nb #(.n(10)) Register(
+    .data_in(RCA_sum),
+    .clk(slo_clk),
+    .clr(clr),
+    .ld(ld),
+    .data_out(reg_out)
+    );
+   
+     fsm FSM (
+    .RCO(RCO),
+    .btn(btn),
+    .clk(slo_clk),
+    .clr(clr), 
+    .led1(led1),
+    .led2(led2),
+    .sel1(sel1),
+    .sel2(sel2),
+    .ld(ld)
+    );
+    
+    clk_divder_nbit #(.n(25)) Clock_Divider(
+    .clockin(clk), 
+    .clockout(slo_clk)
+    );
+    
+    univ_sseg seven_seng(
+        .cnt1({4'b0000,reg_out}),
+        .cnt2(0),
+        .valid(1),
+        .dp_en(0),
+        .dp_sel(2'b00),
+        .mod_sel(2'b10),
+        .sign(0),
+        .clk(clk),
+        .ssegs(seg),
+        .disp_en(an)
+    );
+endmodule
+
+
+
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company:  Q&A
+// Engineer: Qiying Huang
+// 
+// Create Date: 07/07/2018 08:05:03 AM
+// Design Name: 5-Bit Multiplier
+// Module Name: FSM for 5 bit multiplication
+// Project Name: Lab 14 
+// Target Devices: 
+// Tool Versions: 
+// Description: Generic FSM model with both Mealy & Moore         // outputs. 
+// Note: data widths of state variables are not specified 
+//
+// Dependencies: 
+// 
+// Revision:
+// Revision 1.00 - File Created (07-07-2018) 
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+module fsm(RCO, btn, clk, clr, ld,led1,led2,sel1,sel2); 
+    input  RCO, btn, clk; 
+    output reg clr, led1,led2,ld;
+    output reg [1:0] sel1, sel2;
+     
+    //- next state & present state variables
+    reg [1:0] NS, PS; 
+    //- bit-level state representations
+    parameter [1:0] st_wait=2'b00, st_1=2'b01, st_2 = 2'b10; 
+    
+
+
+
+
+    //- model the state registers
+    always @ (posedge clk)
+          PS <= NS; 
+    
+    //- model the next-state and output decoders
+    always @ (btn,RCO,PS)
+    Begin
+       clr = 0; led1 = 0;led2 = 0;  sel1 = 00; sel2 = 00; ld =    0;// assign all outputs
+       case(PS)
+          st_wait:
+          begin
+            // moore output
+             sel1 = 2'b00; //Hold all register 
+             sel2 = 2'b00;
+             ld = 0;
+             led1 = 0;
+             led2 = 0;
+             clr = 0;
+                     
+             if (btn == 0)
+                 begin
+                    NS = st_wait; // self loop
+                 end  
+             else 
+                 begin
+                    clr = 1;
+                    NS = st_1; 
+// clear the registers before multiplication
+                 end  
+          end
+          
+          st_1:
+             begin
+             // moore output
+                sel1 = 2'b01; 
+// load A  into the shift register but not shifting them
+                sel2 = 2'b01; 
+// load B  into the shift register but not shifting them
+                ld = 0; // load the register too
+                clr = 0; 
+                led1 = 1;// turn on the first led 
+                led2 = 0;
+                NS = st_2;
+            end
+           
+           st_2:
+            begin
+            //moore output
+            ld = 1;
+            sel1 = 2'b10;
+            sel2 = 2'b11;
+            clr = 0;
+            led1 = 1;
+            led2 = 1;
+            //transition
+            if (RCO == 0)
+                begin 
+                    NS = st_2; 
+                    end  
+                else
+                    begin
+                        NS = st_wait; 
+                     end  
+             end   
+
+          default: NS = st_wait; 
+
