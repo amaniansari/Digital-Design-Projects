@@ -1,0 +1,264 @@
+// Main File:
+
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Q&A Co.
+// Engineer: Amani, Alaina, Qiying
+//
+// Create Date: 11/7/2018 12:45:31 PM
+// Design Name: Full-Feature 3-Bit Up/Down Counter 
+// Module Name: Main
+// Project Name: Lab 10  
+// Target Devices:
+// Tool Versions:
+// Description: The main file that instantiates all the other 
+// files. This file contains instantiations for the clock 
+// divider, FSM, and SSEGs. 
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////////////////
+
+module Main(reset,up,even,odd,hold,clk,ssegs,anodes);
+    input reset,up,even,odd,hold,clk;
+    output [7:0] ssegs;
+    output [3:0] anodes;
+    wire [2:0] cnt;
+    wire slw_clock;
+
+    //Instantiate clock divider
+    clk_divder_nbit # (.n(25)) CLK_Divider(
+    .clockin(clk),
+    .clockout(slw_clock)
+    );  
+   
+    //Instantiate FSM
+    FSM fsm
+    (
+        .reset(reset),
+        .up(up),
+        .even(even),
+        .odd(odd),
+        .hold(hold),
+        .clk(slw_clock),
+        .cnt(cnt)
+    );
+
+    //Instantiate SSEG
+    univ_sseg SSEG(
+        .cnt1({11'b00000000000,cnt}),
+        .cnt2(0),
+        .valid(1),
+        .dp_en(0),
+        .dp_sel(0),
+        .mod_sel(2'b00),
+        .clk(clk),
+        .sign(0),
+        .ssegs(ssegs),
+        .disp_en(anodes)
+        ); 
+endmodule
+
+// FSM:
+
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Q&A Co.
+// Engineer: Amani, Alaina, Qiying
+//
+// Create Date: 11/7/2018 12:45:31 PM
+// Design Name: Full-Feature 3-Bit Up/Down Counter 
+// Module Name: FSM
+// Project Name: Lab 10  
+// Target Devices:
+// Tool Versions:
+// Description: A Verilog Behavioral FSM Model that accounts for 
+// the following inputs: reset, up, even, odd, hold, clk, cnt.
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////////////////
+
+module FSM(reset,up,even,odd,hold,clk,cnt);
+    input reset,up,even,odd,hold,clk;
+    output reg [2:0] cnt;
+    //next state & present state variables
+    reg [2:0] NS, PS;
+    //bit-level state representations
+    parameter [2:0] 
+        st_0 = 3'b000,
+        st_1 = 3'b001,
+        st_2 = 3'b010,
+        st_3 = 3'b011,
+        st_4 = 3'b100,
+        st_5 = 3'b101,
+        st_6 = 3'b110,
+        st_7 = 3'b111;
+        
+    //model state registers 
+    always @ (posedge clk, posedge reset)
+    begin
+        if (reset == 1)
+            PS <= st_0;
+        else
+            PS <= NS;
+    end
+
+
+    //model the next-state and output decoders
+    always @ (up,even,odd,hold,PS)
+    begin
+        //assign all outputs to avoid latches
+        cnt = 0;
+        case(PS)
+            st_0:
+            begin
+                cnt = 3'b000;
+                if (hold == 1)
+                    NS = st_0;
+                else if (up == 1 && even == 0 && odd == 0)  
+                    NS = st_1;
+                else if (up == 1 && even == 1 && odd == 0)
+                    NS = st_2;
+                else if (up == 0 && even == 0 && odd == 0)  
+                    NS = st_7;
+                else if (up == 0 && even == 1 && odd == 0)
+                    NS = st_6;
+                else 
+                    NS = st_1;
+            end
+            
+            st_1:
+            begin
+                cnt = 3'b001;
+                if (hold == 1)
+                    NS = st_1;
+                else if (up == 1 && even == 0 && odd == 0)  
+                    NS = st_2;
+                else if (up == 1 && even == 0 && odd == 1)
+                    NS = st_3;
+                else if (up == 0 && even == 0 && odd == 0)  
+                    NS = st_0;
+                else if (up == 0 && even == 0 && odd == 1)
+                    NS = st_7;
+                else 
+                    NS = st_0;
+            end
+                
+            st_2:
+            begin
+                cnt = 3'b010;
+                if (hold == 1)
+                    NS = st_2;
+                else if (up == 1 && even == 0 && odd == 0)  
+                    NS = st_3;
+                else if (up == 1 && even == 1 && odd == 0)
+                    NS = st_4;
+                else if (up == 0 && even == 0 && odd == 0)  
+                    NS = st_1;
+                else if (up == 0 && even == 1 && odd == 0)
+                    NS = st_0;
+                else 
+                    NS = st_1;
+            end
+
+            st_3:
+            begin
+                cnt = 3'b011;
+                if (hold == 1)
+                    NS = st_3;
+                else if (up == 1 && even == 0 && odd == 0)  
+                    NS = st_4;
+                else if (up == 1 && even == 0 && odd == 1)
+                    NS = st_5;
+                else if (up == 0 && even == 0 && odd == 0)  
+                    NS = st_2;
+                else if (up == 0 && even == 0 && odd == 1)
+                    NS = st_1;
+                else 
+                    NS = st_0;
+            end
+     
+
+            st_4:
+            begin
+                cnt = 3'b100;
+                if (hold == 1)
+                    NS = st_4;
+                else if (up == 1 && even == 0 && odd == 0)  
+                    NS = st_5;
+                else if (up == 1 && even == 1 && odd == 0)
+                    NS = st_6;
+                else if (up == 0 && even == 0 && odd == 0)  
+                    NS = st_3;
+                else if (up == 0 && even == 1 && odd == 0)
+                    NS = st_2;
+                else 
+                    NS = st_1;
+            end
+                 
+            st_5:
+            begin
+                cnt = 3'b101;
+                if (hold == 1)
+                    NS = st_5;
+                else if (up == 1 && even == 0 && odd == 0)  
+                    NS = st_6;
+                else if (up == 1 && even == 0 && odd == 1)
+                    NS = st_7;
+                else if (up == 0 && even == 0 && odd == 0)  
+                    NS = st_4;
+                else if (up == 0 && even == 0 && odd == 1)
+                    NS = st_3;
+                else 
+                    NS = st_0;
+            end
+     
+
+            st_6:
+            begin
+                cnt = 3'b110;
+                if (hold == 1)
+                    NS = st_6;
+                else if (up == 1 && even == 0 && odd == 0)  
+                    NS = st_7;
+                else if (up == 1 && even == 1 && odd == 0)
+                    NS = st_0;
+                else if (up == 0 && even == 0 && odd == 0)  
+                    NS = st_5;
+                else if (up == 0 && even == 1 && odd == 0)
+                    NS = st_4;
+                else 
+                    NS = st_1;
+            end
+            
+            st_7:
+            begin
+                cnt = 3'b111;
+                if (hold == 1)
+                    NS = st_7;
+                else if (up == 1 && even == 0 && odd == 0)  
+                    NS = st_0;
+                else if (up == 1 && even == 0 && odd == 1)
+                    NS = st_1;
+                else if (up == 0 && even == 0 && odd == 0)  
+                    NS = st_6;
+                else if (up == 0 && even == 0 && odd == 1)
+                    NS = st_5;
+                else 
+                    NS = st_0;
+            end
+            
+            default: NS = st_0;
+            
+        endcase
+    end
+endmodule
