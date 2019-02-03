@@ -1,0 +1,174 @@
+//Main File
+
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Q&A Co.
+// Engineer: Amani, Alaina, Qiying
+//
+// Create Date: 10/22/2018 12:48:41 PM
+// Design Name:Signed Binary 5-Bit Adder/Subtractor with Validity Detection
+// Module Name: MainFile
+// Project Name:Lab 7
+// Target Devices:
+// Tool Versions:
+// Description: the main file that instantiates all the other components of lab 7
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////////////////
+module MainFile (A, B, BTN, clk, ssegs, disp_en);
+    input [4:0] A, B;
+    input clk, BTN;
+    output [7:0] ssegs; 
+    output [3:0] disp_en;
+    
+    wire [4:0] TCB,FinalB;
+    wire valid;
+    wire [4:0] sum, tcSum, FinalSum;
+    
+    //assign 2's comp of B
+    assign TCB = ~B+1;
+    
+//instantiate MUX 1
+mux_2t1_nb # (.n(5)) MUX_B
+(
+.SEL (BTN),
+.D0(TCB),
+.D1 (B),
+.D_OUT (FinalB)
+);
+
+//instantiate RCA
+rca_nb # (.n(5)) RCA
+(
+.a (A),
+.b (FinalB),
+.cin (0),
+.sum (sum),
+.co ()
+);
+
+//instantiate valid box
+Valid_Decoder validbox
+(
+.A4 (A[4]),
+.B4 (FinalB[4]),
+.S4 (sum[4]),
+.valid (valid)
+);
+
+//instantiate 2's Complement of Sum 
+tcSum tcsum  
+(
+.sum (sum),
+.tcSum (tcSum)
+);
+
+//instantiate MUX 2
+mux_2t1_nb # (.n(5)) MUX_FinalSum
+(
+.SEL (sum[4]),
+.D0(sum),
+.D1 (tcSum),
+.D_OUT (FinalSum)
+);
+
+//instantiate UNIV-SSEG
+univ_sseg SSEG
+        (
+        .cnt1 ({9'b000000000,FinalSum}),
+        .cnt2 (0),
+        .valid (valid),
+        .dp_en (0),
+        .dp_sel (0),
+        .mod_sel (2'b00),
+        .clk (clk),
+        .sign (sum[4]),
+        .ssegs (ssegs),
+        .disp_en (disp_en)
+        );
+              
+
+
+endmodule
+
+
+
+
+//tcSUM
+
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Q&A Co.
+// Engineer: Amani, Alaina, Qiying
+//
+// Create Date: 10/22/2018 12:48:41 PM
+// Design Name:Signed Binary 5-Bit Adder/Subtractor with Validity Detection
+// Module Name: tcSum
+// Project Name:Lab 7
+// Target Devices:
+// Tool Versions:
+// Description: Module that takes the two’s complement of a vector
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////////////////
+ 
+
+ 
+module tcSum(
+    input [4:0] sum,
+    output [4:0] tcSum
+    );
+    assign tcSum = ~sum+1;
+endmodule
+
+
+ 
+
+//Valid
+
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Q&A Co.
+// Engineer: Amani, Alaina, Qiying
+//
+// Create Date: 10/22/2018 12:48:41 PM
+// Design Name:Signed Binary 5-Bit Adder/Subtractor with Validity Detection
+// Module Name: Valid_Decoder
+// Project Name:Lab 7
+// Target Devices:
+// Tool Versions:
+// Description: Module that determines validity based on signed bits
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////////////////
+ 
+
+
+
+
+module Valid_Decoder(
+    input A4,
+    input B4,
+    input S4,
+    output valid
+    );
+    assign valid = ~((A4 & B4 & ~S4) | (~A4 & ~B4 & S4));  
+endmodule
+
+
+ 
