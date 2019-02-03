@@ -1,0 +1,449 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company:Q&A Co.
+// Engineer: Amani, Alaina, Qiying
+//
+// Create Date: 11/28/2018 06:30:05 PM
+// Design Name: Four 4-bit Number Sort
+// Module Name: Main
+// Project Name: Lab 12
+// Target Devices:
+// Tool Versions:
+// Description: 
+//
+// Dependencies: In this module the key modules within the file are 
+// instantiated. The key modules include the Input Processing module, 
+// the Counter module, the FSM module, and the different modules for // the SSEG Display 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////
+
+
+module Main(
+input [3:0] A,B,C,D,
+input BTN,clk,
+output [7:0] segs,
+output [3:0] an,
+output LED
+    );
+wire SEL1,SEL4,LD1,LD2,LD3,LD4;
+wire [1:0] SEL2,SEL3;
+wire UP,LD,RCO,RCO_SSEG;
+wire [1:0] CNT,CNT_SSEG;
+wire GT1,GT2,GT3;
+wire [3:0] digit;
+wire clkout;
+
+//Instantiate Input Processing 
+InputProcessing my_input_processing (
+    .A (A),
+    .B (B),
+    .C (C),
+    .D (D),
+    .clk (clk),
+    .SEL1 (SEL1),
+    .SEL2 (SEL2),
+    .SEL3 (SEL3),
+    .SEL4 (SEL4),
+    .CNT (CNT_SSEG),
+    .LD1 (LD1),
+    .LD2 (LD2),
+    .LD3 (LD3), 
+    .LD4 (LD4), 
+    .GT1 (GT1),
+    .GT2 (GT2),
+    .GT3(GT3),
+    .digit(digit) );
+    
+//Instantiate FSM 
+fsm_template myFSM (
+    .RCO (RCO),
+    .GT1 (GT1),
+    .GT2 (GT2),
+    .GT3 (GT3),
+    .BTN (BTN),
+    .clk (clk),
+    .UP (UP),
+    .LED (LED),
+    .LD (LD),
+    .LD1 (LD1),
+    .LD2 (LD2),
+    .LD3 (LD3),
+    .LD4 (LD4),
+    .SEL1 (SEL1),
+    .SEL2 (SEL2),
+    .SEL3 (SEL3),
+    .SEL4 (SEL4)
+);
+
+//Instantiate Counter for State Diagram 
+cntr_up_clr_nb #(.n(2)) MY_CNTR (
+    .clk   (clk), 
+    .clr   (0), 
+    .up    (UP), 
+    .ld    (LD), 
+    .D     (01), 
+    .count (CNT), 
+    .rco   (RCO)   );     
+    
+/* All the below modules are for the sseg display*/
+
+//Instantiate Counter for SSEG
+cntr_up_clr_nb #(.n(2)) CNTR (
+    .clk   (clkout), 
+    .clr   (0), 
+    .up    (1), 
+    .ld    (0), 
+    .D     (0), 
+    .count (CNT_SSEG), 
+    .rco   (RCO_SSEG)   );   //DO WE NEED THIS? 
+    
+//Instantiate clock divider
+    clk_divder_nbit #(.n(13)) MY_DIV (
+        .clockin (clk), 
+        .clockout (clkout) 
+);  
+        
+//MUX for SEG instantiated within input processing (INSIDE Input Processing)
+
+//Decoder for SEG
+CreatedMultiplexor mycathodes (
+.digit(digit),
+.digitalNumber(segs)
+);
+
+//Decoder for anodes 
+stand_dcdr_2t4_1cold  my_stand_dcdr  (
+    .SEL    (CNT_SSEG), 
+    .D_OUT  (an)  ); 
+
+endmodule
+
+
+
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company:Q&A Co.
+// Engineer: Amani, Alaina, Qiying
+// 
+// Create Date: 11/28/2018 06:30:05 PM
+// Design Name: Four 4-bit Number Sort
+// Module Name: Input Processing
+// Project Name: Lab 12 
+// Target Devices: 
+// Tool Versions: 
+// Description: The 4-bit inputs are selected to be stored in     // registers and then compared to each other.
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+
+module InputProcessing(
+input [3:0] A,B,C,D,
+input SEL1,SEL4,clk,
+input [1:0] SEL2,SEL3, CNT,
+input LD1,LD2,LD3,LD4,
+output GT1,GT2,GT3,
+output [3:0] digit
+);
+
+//wires
+wire [3:0] input1,input2,input3,input4;
+wire [3:0] stored_A,stored_B,stored_C,stored_D;
+
+//Instantiate 2 2t1 MUXs
+mux_2t1_nb  #(.n(4)) my_2t1_mux1  (
+    .SEL   (SEL1), 
+    .D0    (A), 
+    .D1    (stored_B), 
+    .D_OUT (input1) );  
+    
+mux_2t1_nb  #(.n(4)) my_2t1_mux2  (
+    .SEL   (SEL4), 
+    .D0    (D), 
+    .D1    (stored_C), 
+    .D_OUT (input4) );  
+
+//Instantiate 2 3t1 MUXs
+mux_3t1_nb  #(.n(4)) my_3t1_mux1  (
+    .SEL   (SEL2), 
+    .D0    (B), 
+    .D1    (stored_A), 
+    .D2    (stored_C), 
+    .D_OUT (input2) );  
+
+mux_3t1_nb  #(.n(4)) my_3t1_mux2  (
+    .SEL   (SEL3), 
+    .D0    (C), 
+    .D1    (stored_B), 
+    .D2    (stored_D), 
+    .D_OUT (input3) );  
+    
+//Instantiate Register 1
+reg_nb #(4) MY_REG1 (
+    .data_in  (input1), 
+    .ld       (LD1), 
+    .clk      (clk), 
+    .clr      (0), 
+    .data_out (stored_A) );  
+    
+//Instantiate Register 2
+reg_nb #(4) MY_REG2 (
+    .data_in  (input2), 
+    .ld       (LD2), 
+    .clk      (clk), 
+    .clr      (0), 
+    .data_out (stored_B) );  
+
+//Instantiate Register 3
+reg_nb #(4) MY_REG3 (
+    .data_in  (input3), 
+    .ld       (LD3), 
+    .clk      (clk), 
+    .clr      (0), 
+    .data_out (stored_C) );  
+
+//Instantiate Register 4
+reg_nb #(4) MY_REG4 (
+    .data_in  (input4), 
+    .ld       (LD4), 
+    .clk      (clk), 
+    .clr      (0), 
+    .data_out (stored_D) );  
+
+//Instantiate Comparator1
+comp_nb #(.n(4)) MY_COMP1 (
+    .a (stored_A), 
+    .b (stored_B), 
+    .gt (GT1)
+);  
+
+//Instantiate Comparator2
+comp_nb #(.n(4)) MY_COMP2 (
+    .a (stored_B), 
+    .b (stored_C), 
+    .gt (GT2)
+);  
+
+//Instantiate Comparator3
+comp_nb #(.n(4)) MY_COMP3 (
+    .a (stored_C), 
+    .b (stored_D), 
+    .gt (GT3)
+);  
+
+//Instantiate Mux for SEG
+mux_4t1_nb  #(.n(4)) my_4t1_mux  (
+    .SEL   (CNT), 
+    .D0    (stored_A), 
+    .D1    (stored_B), 
+    .D2    (stored_C), 
+    .D3    (stored_D),
+    .D_OUT (digit) );  
+
+endmodule
+
+
+
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company:Q&A Co.
+// Engineer: Amani, Alaina, Qiying
+// 
+// Create Date: 11/28/2018 06:30:05 PM
+// Design Name: Four 4-bit Number Sort
+// Module Name: FSM Template 
+// Project Name: Lab 12 
+// Target Devices: 
+// Tool Versions: 
+// Description: The FSM sorts the 4-bit inputs three times to put // them in ascending order.
+//
+// Dependencies: 
+// 
+// Revision:
+// Revision 1.00 - File Created (07-07-2018) 
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+module fsm_template(RCO,GT1,GT2,GT3,BTN,clk,UP,LED,LD,LD1,LD2,LD3,LD4,SEL1,SEL2,SEL3,SEL4); 
+    input  RCO,GT1,GT2,GT3,BTN,clk; 
+    output reg UP,LED,LD,LD1,LD2,LD3,LD4,SEL1,SEL4;
+    output reg [1:0] SEL2,SEL3;
+     
+    //- next state & present state variables
+    reg [2:0] NS, PS; 
+    //- bit-level state representations
+    parameter [2:0] wait_0=3'b000, st_0=3'b001, st_1=3'b010, st_2=3'b011, st_3=3'b100, CNT=3'b101, checkBTN=3'b110; 
+    
+    always @ (posedge clk)
+     PS <= NS;
+     
+    //- model the next-state and output decoders
+    always @ (RCO,GT1,GT2,GT3,BTN,PS)
+    begin
+       UP = 0; LED = 0; LD = 0; LD1 = 0; LD2 = 0; LD3 = 0; LD4 = 0; SEL1 = 0; SEL2 = 0; SEL3 = 0; SEL4 = 0; // assign all outputs
+       case(PS)
+       
+          wait_0:
+          begin
+             LED = 1; LD = 0; UP = 0;       
+             if (BTN == 1)
+             begin
+             //changed to initilazie sel values
+                LED = 0; 
+                SEL1 = 0; SEL2 = 2'b00; SEL3 = 2'b00; SEL4 = 0;
+                LD1 = 1; LD2 = 1; LD3 = 1; LD4 = 1; LD = 1;
+                NS = st_1; 
+             end  
+             else
+             begin 
+                NS = wait_0; 
+             end  
+          end
+          
+          
+          st_1:
+          begin
+            LD = 0; UP = 0; LD3 = 0; LD4 = 0;
+            if (GT1 == 1)
+            begin 
+               SEL1 = 1; SEL2 = 1; LD1 = 1; LD2 = 1; LED = 0;
+               NS = st_2; 
+            end  
+            else
+             begin
+                SEL1 = 0; SEL2 = 0; LD1 = 0; LD2 = 0; LED = 0;
+                NS = st_2; 
+             end  
+          end
+             
+          st_2:
+          begin
+            LD = 0; UP = 0; LD1 = 0; LD4 = 0;
+            if (GT2 == 1)
+            begin 
+               SEL2 = 2; SEL3 = 1; LD2 = 1; LD3 = 1; LED = 0;
+               NS = st_3; 
+            end  
+            else
+            begin
+               SEL2 = 0; SEL3 = 0; LD2 = 0; LD3 = 0; LED = 0;
+               NS = st_3; 
+            end  
+          end
+
+          st_3:
+             begin
+                 LD = 0; UP = 0; LD1 = 0; LD2 = 0;
+                 if (GT3 == 1)
+                 begin 
+                    SEL3 = 2; SEL4 = 1; LD3 = 1; LD4 = 1; LED = 0;
+                    NS = CNT; 
+                 end  
+                 else
+                 begin
+                    SEL3 = 0; SEL4 = 0; LD3 = 0; LD4 = 0; LED = 0;
+                    NS = CNT;
+                 end  
+             end
+
+          CNT:
+             begin
+                 LD = 0; UP = 1; LD1 = 0; LD2 = 0; LD3 = 0; LD4 = 0;
+                 if (RCO == 1)
+                 begin 
+                    NS = checkBTN; 
+                 end  
+                 else
+                 begin
+                    NS = st_1; 
+                 end  
+             end
+             
+          checkBTN:
+                begin
+                    LD = 0; UP = 0; LD1 = 0; LD2 = 0; LD3 = 0; LD4 = 0;
+                    if (BTN == 1)
+                    begin 
+                       NS = checkBTN; 
+                    end  
+                    else
+                    begin
+                       NS = wait_0; 
+                    end  
+                end
+                
+          default: NS = wait_0; 
+            
+          endcase
+      end              
+endmodule
+
+
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company:Q&A Co.
+// Engineer: Amani, Alaina, Qiying
+// 
+// Create Date: 11/28/2018 06:30:05 PM
+// Design Name: Four 4-bit Number Sort
+// Module Name: FSM Template 
+// Project Name: CreatedMultiplexor
+// Target Devices: 
+// Tool Versions: 
+// Description: This file is the decoder for the seven segments. 
+// The decoder for the anodes is in a separate file and was 
+// provided to us 
+//
+// Dependencies: 
+// 
+// Revision:
+// Revision 1.00 - File Created (07-07-2018) 
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+
+module CreatedMultiplexor(
+input [3:0] digit,
+output reg [7:0] digitalNumber
+);
+
+ always @ (digit)
+    begin
+        case(digit)
+            4'b0000:digitalNumber = 8'b0000_0011; //0
+            4'b0001:digitalNumber = 8'b1001_1111; //1
+            4'b0010:digitalNumber = 8'b0010_0101; //2
+            4'b0011:digitalNumber = 8'b0000_1101; //3
+            4'b0100:digitalNumber = 8'b1001_1001; //4
+            4'b0101:digitalNumber = 8'b0100_1001; //5
+            4'b0110:digitalNumber = 8'b0100_0001; //6
+            4'b0111:digitalNumber = 8'b0001_1111; //7
+            4'b1000:digitalNumber = 8'b0000_0001; //8 
+            4'b1001:digitalNumber = 8'b0000_1001; //9
+            4'b1010:digitalNumber = 8'b0001_0001; //A (10)
+            4'b1011:digitalNumber = 8'b1100_0001; //b (11)
+            4'b1100:digitalNumber = 8'b0110_0011; //C (12)
+            4'b1101:digitalNumber = 8'b1000_0101; //d (13)
+            4'b1110:digitalNumber = 8'b0110_0001; //E (14)
+            4'b1111:digitalNumber = 8'b0111_0001; //F (15)
+            
+            default: digitalNumber = 8'b0000_0000;
+        endcase
+        end
+
+endmodule
+
+
+            
+        
