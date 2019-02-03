@@ -1,0 +1,148 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company:Q&A Co.
+// Engineer: Amani, Alaina, Qiying
+//
+// Create Date: 10/12/2018 11:59:57 AM
+// Design Name: Comparators 
+// Module Name: Lab 5
+// Project Name: 8-Bit Comparator with 4-Bit Comparator Modules 
+// Target Devices:
+// Tool Versions:
+// Description: We used two 4-bit comparators as an 8-bit comparator. One 4-bit comparator compared the most significant bits, while the // other 4-bit comparator compared the least significant bits. The outputs were then compared in the logic box.
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+////////////////////////////////////////////////////////////////////// 
+module comp_nb(A, B, EQ, LT, GT);
+ input [n-1:0] A,B;
+ output reg EQ, LT, GT;
+parameter n = 8;
+     always @ (A,B)
+     begin
+         if (A == B)
+         begin
+            EQ = 1; LT = 0; GT = 0;
+         end
+         else if (A > B)
+         begin
+             EQ = 0; LT = 0; GT = 1;
+         end
+         else if (A < B)
+         begin
+            EQ = 0; LT = 1; GT = 0;
+         end
+         else
+         begin
+            EQ = 0; LT = 0; GT = 0;
+         end
+     end
+ endmodule
+     
+ module comp_8b(a,b,eq,lt,gt);
+         input [7:0] a, b;
+         output reg eq, lt, gt;
+         wire eq1, eq2;
+         wire lt1,lt2;
+         wire gt1,gt2;
+        
+         // instantiate first_4 bit comparartor
+         comp_nb #(.n(4))First_COMP4(
+         .A (a[3:0]),
+         .B (b[3:0]),
+         .EQ(eq1),
+         .GT(gt1),
+         .LT(lt1));
+         
+         comp_nb #(.n(4))Second_COMP4(
+          .A (a[7:4]),
+          .B (b[7:4]),
+          .EQ(eq2),
+          .GT(gt2),
+          .LT(lt2));
+          
+      always @ (eq1,eq2,gt1,gt2,lt1,lt2)
+          begin
+            eq = 0;
+            gt = 0;
+            lt = 0;
+            if (eq1 == 1 && eq2 == 1)
+                begin
+                eq = 1;
+                end
+            else if (gt1 == 1)
+                begin
+                gt = 1;
+                end
+           else if (gt1 == 0)
+                begin
+                lt = 1;
+                end
+                
+       
+            else if (eq1 == 1 && lt2 == 1)
+                begin
+                lt = 1;
+                end
+                
+            else if (eq1 == 1 && gt2 == 1)
+                begin
+                gt = 1;
+                end
+             end                                   
+endmodule
+
+
+//////////////////////////////////////////////////////////////////////////////////
+// Company:Q&A Co.
+// Engineer: Amani, Alaina, Qiying
+//
+// Create Date: 10/12/2018 11:59:57 AM
+// Design Name: Comparators: Test Bench 
+// Module Name: Lab 5
+// Project Name: 8-Bit Comparator with 4-Bit Comparator Modules 
+// Target Devices:
+// Tool Versions:
+// Description: We implemented test cases. 
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+////////////////////////////////////////////////////////////////////// 
+module tb_comp_8b();
+    reg [7:0] a, b;
+    wire eq, lt, gt;
+    comp_8b uut(
+        .a (a),
+        .b (b),
+        .eq (eq),
+        .lt (lt),
+        .gt (gt));
+     
+   initial
+    begin
+        a = 8'b00000000;
+        b = 8'b11111111;
+        #20 a = 8'b11111111;
+            b = 8'b11111111;
+        #20 a = 8'b11110000;
+            b = 8'b11111111;
+        #20 a = 8'b11111111;
+            b = 8'b11110000;
+        #20 a = 8'b00001111;
+            b = 8'b11110000;
+        #20 a = 8'b00001111;
+            b = 8'b11110000;
+    end
+endmodule
+
+
+
+
