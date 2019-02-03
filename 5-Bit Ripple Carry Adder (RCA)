@@ -1,0 +1,99 @@
+/*
+.v File
+
+File Content Description: In this file we created a half adder, full adder, and comp_5b module and utilized instantiations to create a 5-bit   Ripple Carry Adder.
+*/
+
+`timescale 1ns / 1ps
+
+//////////////////////////////////////////////////////////////////////////////////
+// Company:Q&A Co.
+// Engineer: Amani, Alaina, Qiying
+//
+// Create Date: 10/03/2018 11:59:57 AM
+// Design Name: Carry Adder 
+// Module Name: Lab 3
+// Project Name: 5 - Bit Ripple Carry Adder (RCA) 
+// Target Devices:
+// Tool Versions:
+// Description: 
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////////////////
+
+module HalfAdder
+(
+    input a,
+    input b,
+    output sum,
+    output co
+ );
+    
+    assign sum = (a & ~b) | (~a & b);
+    assign co = a & b;
+endmodule
+module FullAdder(
+    input A,
+    input B,
+    input Cin,
+    output S,
+    output Co
+    );
+    assign S = (~A & ~B & Cin)|(~A & B & ~Cin)|(A & ~B & ~Cin)|(A & B & Cin);
+    assign Co = (~A & B & Cin)|(A & ~B & Cin)|(A & B & ~Cin)|(A & B & Cin);
+endmodule
+//module
+module comp_5b (a,b,Co,S);
+    input [4:0] a,b;
+    output Co;
+    output [4:0] S;
+ //- internal interface signals
+ wire [3:0] co;
+ 
+ //- full_adder instantiations
+ 
+  HalfAdder HA (
+    .a (a[0]),
+    .b (b[0]),
+    .sum (S[0]),
+    .co (co[0])
+     );
+     
+    FullAdder FA1 (
+     .A (a[1]),
+     .B (b[1]),
+     .Cin (co[0]),
+     .S (S[1]),
+     .Co (co[1])
+      );
+    FullAdder FA2 (
+     .A (a[2]),
+     .B (b[2]),
+     .Cin (co[1]),
+     .S (S[2]),
+     .Co (co[2])
+      );
+      
+      FullAdder FA3 (
+      .A (a[3]),
+      .B (b[3]),
+      .Cin (co[2]),
+      .S (S[3]),
+      .Co (co[3])
+      );
+      
+      FullAdder FA4 (
+      .A (a[4]),
+      .B (b[4]),
+      .Cin (co[3]),
+      .S (S[4]),
+      .Co (Co)
+      );
+      
+endmodule
+
